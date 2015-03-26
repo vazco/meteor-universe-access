@@ -5,6 +5,12 @@
 This package allows to set a document level access/permission rules for publication.
 You can control access using collection function allow/deny with new key publish
 
+## Installation
+
+```sh
+$ meteor add vazco:universe-access
+```
+
 ## Publishing
 
 UniCollection.publish - Publish with Access control, this is the replacement of Meteor.publish.
