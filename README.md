@@ -1,5 +1,7 @@
 # Universe Access
 
+#### This is extension of  [Universe Collection & Mappings](https://atmospherejs.com/vazco/universe-collection) #####
+
 This package allows to set a document level access/permission rules for publication.
 You can control access using collection function allow/deny with new key publish
 
@@ -24,7 +26,7 @@ You can return one Collection.Cursor, an array of Collection.Cursors.
 If a publish function does not return a cursor or array of cursors,
 it is assumed to be using the low-level added/changed/removed interface, and it must also call ready once the initial record set is complete.
 
-## low-level publish
+## Low-level publish api
 
 ```
 UniCollection.publish('example', function() {
@@ -47,6 +49,7 @@ UniCollection.publish('example', function() {
 ```
 
 ## Using with build-in mappings
+
 This package provides simple way mapping mechanism.
 You must return base collection or collections and using method setMappings,
 define relational mappings
