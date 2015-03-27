@@ -23,7 +23,7 @@ Additionally this function provide a mappings of others documents.
 You can map UniCollection documents like as non-UniCollection documents.
 
 ## Options
-- ** override ** gives possibility of override once defined publication handler.
+- **override** gives possibility of override once defined publication handler.
     You can do that by passing override = true in options of UniCollection.publish.
 
 ```
