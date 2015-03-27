@@ -65,7 +65,7 @@ var _addUniverseValidators = function(allowOrDeny, options) {
 };
 
 if(Meteor.isServer){
-
+    UniCollection._publications = {};
     /**
      * Publish with Access control, this is the replacement of Meteor.publish.
      * It works for non-universe collections in the same way like Meteor.publish (without access control)
@@ -77,10 +77,24 @@ if(Meteor.isServer){
      * @param handler Function called on the server each time a client subscribes.
      * Inside the function, this is the publish handler object, described below.
      * If the client passed arguments to subscribe, the function is called with the same arguments.
-     * @param options.is_auto auto publish without access control.
+     * @param options.override {boolean} resets handler for publication name. (only named publication can be overridden)
      * @returns {*}
      */
-    UniCollection.publish = function(name, handler){
+    UniCollection.publish = function(name, handler, options){
+        if(!_.isFunction(handler)){
+            throw new Meteor.Error(404, 'UniCollection.publish: handler must be an function');
+        }
+        if(name){
+            var isAlreadyDefined = !!UniCollection._publications[name];
+            if(isAlreadyDefined && (!options  || !options.override)){
+                throw new Meteor.Error(403, 'Publication is already declared for name: "'+name+'", ' +
+                'if you want override it, set override: true in options');
+            }
+            UniCollection._publications[name] = handler;
+            if(isAlreadyDefined){
+                return;
+            }
+        }
         var newHandler = function(){
             var sub = this;
             this._directAdded = this.added;
@@ -110,11 +124,15 @@ if(Meteor.isServer){
                 }
                 this._uniMappings[collectionName] = mappings;
             };
+            if(name){
+                handler = UniCollection._publications[name];
+            }
             var curs = handler.apply(this, arguments);
             if(curs){
                 _eachCursorsCheck(curs, this);
             }
         };
+
         return Meteor.publish(name, newHandler);
     };
 

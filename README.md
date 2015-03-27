@@ -3,7 +3,9 @@
 #### This is extension of  [Universe Collection & Mappings](https://atmospherejs.com/vazco/universe-collection) #####
 
 This package allows to set a document level access/permission rules for publication.
-You can control access using collection function allow/deny with new key publish
+You can control access using collection function allow/deny with new key publish.
+
+Additionally package provides possibility of override once defined publication handler.
 
 ## Installation
 
@@ -19,6 +21,15 @@ But for UniCollection, the access is checked for every document and published ar
 which are allowed only, it means that document must pass by any 'publish' allow and deny rules.
 Additionally this function provide a mappings of others documents.
 You can map UniCollection documents like as non-UniCollection documents.
+
+## Options
+- **override** gives possibility of override once defined publication handler.
+    You can do that by passing override = true in options of UniCollection.publish.
+
+```
+var options = { override: true };
+UniCollection.publish(name, handler, options);
+```
 
 ## Simple way
 
@@ -57,8 +68,8 @@ UniCollection.publish('example', function() {
 ## Using with build-in mappings
 
 This package provides simple way mapping mechanism.
-You must return base collection or collections and using method setMappings,
-define relational mappings
+You must return base collection or collections and using method setMappings, define relational mappings
+
 **Notice:** Mappings are in beta version (so, it mean this functionality can be unstable)
 
 ```
