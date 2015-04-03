@@ -1,4 +1,8 @@
 
+====1.1.3====
+-------------
+- Removed unnecessary dependencies
+
 ====1.1.1====
 -------------
 - Bug fixed

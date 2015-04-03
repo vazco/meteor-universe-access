@@ -119,7 +119,7 @@ if(Meteor.isServer){
                 if(_.isObject(collectionName) && collectionName._name){
                     collectionName = collectionName._name;
                 }
-                if(!_.isArray(mappings) && _.isObject(mappings) && mappings.key){
+                if(!_.isArray(mappings) && _.isObject(mappings) && mappings.collection){
                     mappings = [mappings];
                 }
                 if(!_.isArray(mappings)){
