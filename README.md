@@ -68,7 +68,9 @@ UniCollection.publish('example', function() {
 - **allowedFields** Dictionary of fields possible return or exclude from it.
     ( They should be the same as was passed to options.fields in find() method. )
     You can get allowed/excluded fields directly from cursor:
-``` Server side:
+    
+```
+Server side:
 var allowedFields = cursor._cursorDescription.options.fields
 ```
 
@@ -92,7 +94,7 @@ UniCollection.publish('example', function() {
                     collection: Meteor.users,
                     reverse: true // reverse direction of the relationship (inverse relationship is more complex)
         }
-    ]);
+     ]);
     //For mapped users you can map another documents
     this.setMappings(Meteor.users, [
             {
@@ -114,6 +116,7 @@ UniCollection.publish('example', function() {
 
     return Colls.MyColl.find();
 });
+
 ```
 
 ## Access control
