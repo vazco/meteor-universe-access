@@ -1,6 +1,6 @@
 # Universe Access
 
-#### This is extension of  [Universe Collection & Mappings](https://atmospherejs.com/vazco/universe-collection) #####
+#### This is extension of  [Universe Collection & Document Helpers](https://atmospherejs.com/vazco/universe-collection) #####
 
 This package allows to set a document level access/permission rules for publication.
 You can control access using collection function allow/deny with new key publish.
@@ -68,7 +68,7 @@ UniCollection.publish('example', function() {
 - **allowedFields** Dictionary of fields possible return or exclude from it.
     ( They should be the same as was passed to options.fields in find() method. )
     You can get allowed/excluded fields directly from cursor:
-    
+
 ```
 Server side:
 var allowedFields = cursor._cursorDescription.options.fields

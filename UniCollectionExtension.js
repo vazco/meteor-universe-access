@@ -119,6 +119,9 @@ if(Meteor.isServer){
                 if(_.isObject(collectionName) && collectionName._name){
                     collectionName = collectionName._name;
                 }
+                if(!_.isArray(mappings) && _.isObject(mappings) && mappings.key){
+                    mappings = [mappings];
+                }
                 if(!_.isArray(mappings)){
                     throw Meteor.Error(500, 'Parameter mappings must be an array of object');
                 }
@@ -174,6 +177,10 @@ if(Meteor.isServer){
         var hasOldDoc = UniUtils.get(this, '_documents.'+collectionName+'.'+id);
         var doc = col.findOne(id, {fields: allowedFields || undefined});
         var newAccess = _validateRules.call(col, this.userId, doc, this._name);
+        if(!hasOldDoc && !newAccess){
+            //ignoring missed with no rights
+            return;
+        }
         //if we lost access
         if (hasOldDoc && !newAccess) {
             return removedHandler.call(this, collectionName, id);
@@ -238,7 +245,7 @@ if(Meteor.isServer){
                         sub.changed(collName, id, fields, allowedFields);
                     },
                     removed: function (id) {
-                        obs.docs[id] = undefined;
+                        delete obs.docs[id];
                         sub.removed(collName, id);
                     }
                 });
