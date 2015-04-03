@@ -50,13 +50,6 @@ UniUsers.deny = function(options){
     Meteor.users.deny.call(this, _addUniverseValidators.call(this, 'deny', options));
 };
 
-var find = UniCollection.prototype.find;
-UniCollection.prototype.find = function(){
-    var cur = find.apply(this, arguments);
-    cur._getUniCollection = this._getCollection;
-    return cur;
-};
-
 var _addUniverseValidators = function(allowOrDeny, options) {
     var myKeys = ['publish', 'disable'];
     var self = this;

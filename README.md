@@ -122,6 +122,9 @@ UniCollection.publish published all non-UniCollection documents
 and ONLY those documents, which have at least one rule fulfilled in {UniCollection}.allow 'publish' method and all non fulfilled rule in {UniCollection}.deny 'publish'.
 IF YOU NEVER SET UP ANY PUBLISH METHOD IN ALLOW rules on a collection then all documents on the collection will be DENIED!
 
+Additionally collection of users can be treated as universe collection.
+You should prefer UniUsers instead Meteor.users
+
 ### Allow
 
 ```js
