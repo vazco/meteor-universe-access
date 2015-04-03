@@ -1,4 +1,8 @@
 
+====1.1.0====
+-------------
+- Bugfixed
+
 ====1.0.5====
 -------------
 - Added possibility of override already defined handlers in UniCollection.publish

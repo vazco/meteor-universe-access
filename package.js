@@ -11,8 +11,8 @@ Package.on_use(function (api) {
     api.use([
         'underscore',
         'mongo',
-        'vazco:universe-utilities@1.0.2',
-        'vazco:universe-collection@1.0.1'
+        'vazco:universe-utilities@1.0.3',
+        'vazco:universe-collection@1.0.5'
     ]);
 
     api.add_files([

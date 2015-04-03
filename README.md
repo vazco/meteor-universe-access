@@ -52,7 +52,7 @@ UniCollection.publish('example', function() {
         added: function (id, fields) {
             self.added("books", id, fields);
         },
-        changed: function (id, fields) {
+        changed: function (id, fields, allowedFields) {
             self.changed("books", id, fields);
         },
         removed: function (id, fields) {
@@ -65,12 +65,18 @@ UniCollection.publish('example', function() {
 });
 ```
 
+- **allowedFields** Dictionary of fields possible return or exclude from it.
+    ( They should be the same as was passed to options.fields in find() method. )
+    You can get allowed/excluded fields directly from cursor:
+``` Server side:
+var allowedFields = cursor._cursorDescription.options.fields
+```
+
 ## Using with build-in mappings
 
 This package provides simple way mapping mechanism.
 You must return base collection or collections and using method setMappings, define relational mappings
 
-**Notice:** Mappings are in beta version (so, it mean this functionality can be unstable)
 
 ```
 UniCollection.publish('example', function() {
@@ -101,7 +107,8 @@ UniCollection.publish('example', function() {
         {
             key: 'roomId',
             reverse:true,
-            collection: Colls.Documents
+            collection: Colls.Documents,
+            options: {fields: { title: 1 }}
         }
     ]);
 

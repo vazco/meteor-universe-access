@@ -21,6 +21,10 @@ UniCollection.prototype.allow = function(options){
     Mongo.Collection.prototype.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
 };
 
+UniUsers.allow = function(options){
+    Meteor.users.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
+};
+
 /**
  * This works like the same method in Mongo.Collection
  * but difference is that this method can check document before it will be published by UniCollection.publish
@@ -40,6 +44,17 @@ UniCollection.prototype.allow = function(options){
  */
 UniCollection.prototype.deny = function(options){
     Mongo.Collection.prototype.deny.call(this, _addUniverseValidators.call(this, 'deny', options));
+};
+
+UniUsers.deny = function(options){
+    Meteor.users.deny.call(this, _addUniverseValidators.call(this, 'deny', options));
+};
+
+var find = UniCollection.prototype.find;
+UniCollection.prototype.find = function(){
+    var cur = find.apply(this, arguments);
+    cur._getUniCollection = this._getCollection;
+    return cur;
 };
 
 var _addUniverseValidators = function(allowOrDeny, options) {
@@ -96,22 +111,17 @@ if(Meteor.isServer){
             }
         }
         var newHandler = function(){
-            var sub = this;
             this._directAdded = this.added;
             this._directChanged = this.changed;
             this._directRemoved = this.removed;
-            this._uniObserveHandles = [];
+            this._uniMappingsObs = {};
+            this._uniDocCounts = {};
             this._uniMappings = {};
 
-            this.added = function(collectionName, id, doc){
-                return _runHandler('added', collectionName, id, doc, sub);
-            };
-            this.changed = function(collectionName, id, doc){
-                return _runHandler('changed', collectionName, id, doc, sub);
-            };
-            this.removed = function(collectionName, id, doc){
-                return _runHandler('removed', collectionName, id, doc, sub);
-            };
+            this.added = addedHandler;
+            this.changed = changedHandler;
+            this.removed = removedHandler;
+
             this.setMappings = function(collectionName, mappings){
                 if(_.isObject(collectionName) && collectionName._name){
                     collectionName = collectionName._name;
@@ -129,14 +139,74 @@ if(Meteor.isServer){
             }
             var curs = handler.apply(this, arguments);
             if(curs){
-                _eachCursorsCheck(curs, this);
+                _eachCursorsCheck.call(this, curs);
             }
         };
 
-        return Meteor.publish(name, newHandler);
+        Meteor.publish(name, newHandler);
+    };
+    var _prepareUniDocCount = function(collectionName, id){
+        this._uniDocCounts[collectionName] = this._uniDocCounts[collectionName] || {};
+        this._uniDocCounts[collectionName][id] =
+            this._uniDocCounts[collectionName][id] || 0;
     };
 
 
+    var addedHandler = function(collectionName, id, doc) {
+        _prepareUniDocCount.call(this, collectionName, id, doc);
+        var col = UniCollection._uniCollections[collectionName];
+        //checks if no universe collection
+        if(!col){
+            this._uniDocCounts[collectionName][id]++;
+            this._directAdded(collectionName, id, doc);
+            _doMapping.call(this, id, doc, collectionName);
+            return true;
+        } else if (_validateRules.call(col, this.userId, doc, this._name)) {
+            this._uniDocCounts[collectionName][id]++;
+            this._directAdded(collectionName, id, doc);
+            _doMapping.call(this, id, doc, collectionName);
+            return true;
+        }
+
+    };
+
+    var changedHandler = function(collectionName, id, changedFields, allowedFields) {
+        var col = UniCollection._uniCollections[collectionName];
+        //checks if no universe collection
+        if(!col){
+            this._directChanged(collectionName, id, changedFields);
+            _doMapping.call(this, id, changedFields, collectionName);
+            return;
+        }
+        var hasOldDoc = UniUtils.get(this, '_documents.'+collectionName+'.'+id);
+        var doc = col.findOne(id, {fields: allowedFields || undefined});
+        var newAccess = _validateRules.call(col, this.userId, doc, this._name);
+        //if we lost access
+        if (hasOldDoc && !newAccess) {
+            return removedHandler.call(this, collectionName, id);
+        }
+        //if we gained access, quickly adds doc
+        if(!hasOldDoc && newAccess) {
+            return addedHandler.call(this, collectionName, id, doc);
+        }
+        //adding changes
+        this._directChanged(collectionName, id, changedFields);
+        _doMapping.call(this, id, doc, collectionName);
+        return true;
+    };
+
+    var removedHandler = function(collectionName, id) {
+        if(!this._uniDocCounts[collectionName] || this._uniDocCounts[collectionName][id] <= 0) {
+            return;
+        }
+        --this._uniDocCounts[collectionName][id];
+        if(!this._uniDocCounts[collectionName][id]){
+            delete this._uniDocCounts[collectionName][id];
+            _stopObserveHandlesAndCleanUp.call(this, collectionName, id);
+            return this._directRemoved(collectionName, id);
+        }
+
+    };
 
     var _validateRules = function(userId, doc, publicationName){
         var publishValids = UniUtils.get(this, '_universeValidators.publish');
@@ -153,157 +223,52 @@ if(Meteor.isServer){
         return false;
     };
 
-    UniCollection.prototype.Access = {
-        /**
-         * Handle to notify publication about added doc with checking access rules
-         * @param newDocument
-         * @param pub 'this' from publication callback
-         * @returns {boolean}
-         */
-        addedHandler: function(newDocument, pub) {
-            if (_validateRules.call(this, pub.userId, newDocument, pub._name)) {
-                pub.added(this._name, newDocument._id, newDocument);
-                _doMapping(newDocument._id, newDocument, pub._uniMappings[this._name], pub._directSub||pub);
-                return true;
-            }
-        },
-        /**
-         * Handle to notify publication about changed doc with checking access rules
-         * @param changedFields
-         * @param pub 'this' from publication callback
-         * @returns {boolean}
-         */
-        changedHandler: function(changedFields, pub) {
-            var newAccess;
-            var hasOldDoc = UniUtils.get(pub, '_documents.'+this._name+'.'+changedFields._id);
-            var doc = this.findOne(changedFields._id);
-            if(!hasOldDoc) {
-                return this.access.addedHandler.call(this, doc, pub);
-            }
-            newAccess = _validateRules.call(this, pub.userId, doc, pub._name);
-            if (!newAccess) {
-                return this.access.removedHandler.call(this, changedFields, pub);
-            }
-            if (newAccess) {
-                pub.changed(this._name, changedFields._id, changedFields);
-                _doMapping(changedFields._id, changedFields, pub._uniMappings[this._name], pub._directSub||pub);
-                return true;
-            }
-        },
-        /**
-         * Handle to notify publication about removed doc with checking access rules
-         * @param newDocument
-         * @param pub 'this' from publication callback
-         * @returns {boolean}
-         */
-        removedHandler: function(oldDocument, pub) {
-            var id = UniUtils.getIdIfDocument(oldDocument);
-            if(!pub._documents[this._name] || !pub._documents[this._name][id]) {
-                return;
-            }
-            _stopObserveHandlesAndCleanUp(pub._directSub||pub, id);
-            return pub.removed(this._name, id);
-        }
-
-    };
-
-    var _runHandler = function(handlerName, collectionName, id, doc, directSub){
-        var col = UniUtils.get(UniCollection, '_uniCollections.'+collectionName);
-        if(_.isObject(col) && col instanceof UniCollection) {
-            var handler = UniUtils.get(col, 'Access.'+handlerName+'Handler');
-            if(!_.isFunction(handler)){
-                throw Error(
-                    'Missing access handler for "'+handlerName+'" ('+handlerName+'Handler) collection: '+collectionName
-                );
-            }
-
-            if(_.isObject(doc) && !doc._id){
-                doc._id = id;
-            }
-
-            if(!doc && handlerName === 'removed'){
-                doc = id;
-            }
-
-            //Prepare object for Access Handlers (collection.Access[addedHandler|changedHandler|removeHandler])
-            var pub = {
-                _directSub: directSub,
-                _uniMappings: directSub._uniMappings,
-                added: function(){
-                    debugger;
-                    return directSub._directAdded.apply(this._directSub, arguments);
-                },
-                changed: function(){
-                    return directSub._directChanged.apply(this._directSub, arguments);
-                },
-                removed: function(){
-                    return directSub._directRemoved.apply(this._directSub, arguments);
-                },
-                userId: directSub.userId,
-                _documents: directSub._documents,
-                _name: directSub._name
-            };
-            return handler.call(col, doc, pub);
-        }
-
-        if(_.contains(['added', 'changed'], handlerName)){
-            _doMapping(id, doc, directSub._uniMappings[collectionName], directSub, collectionName);
-        } else if(handlerName === 'removed'){
-            _stopObserveHandlesAndCleanUp(directSub, id);
-        }
-
-        return directSub[handlerName](collectionName, id, doc);
-    };
-
-    var _eachCursorsCheck = function(curs, sub, _parentDocId){
+   var _eachCursorsCheck = function(curs, _parentDocId){
         if(!_.isArray(curs)) {
             curs = [curs];
         }
-
+       var sub = this;
         if(curs.length) {
-            var _docIds;
-            _.each(curs, function(cursor) {
-                if(!_.isObject(cursor) || !cursor.observeChanges){
+            var handles = _.map(curs, function (cursor) {
+                if (!_.isObject(cursor) || !cursor.observeChanges) {
                     throw Meteor.Error(500, 'Publish function can only return a Cursor or an array of Cursors');
                 }
                 var collName = cursor._getCollectionName();
-                _docIds = [];
-                var observeHandle = cursor.observeChanges({
+                var obs = {docs:{}, name: collName};
+                var allowedFields = UniUtils.get(cursor._cursorDescription, 'options.fields');
+                obs.handle = cursor.observeChanges({
                     added: function (id, fields) {
-                        _docIds.push(id);
+                        obs.docs[id] = true;
                         sub.added(collName, id, fields);
                     },
                     changed: function (id, fields) {
-                        sub.changed(collName, id, fields);
+                        sub.changed(collName, id, fields, allowedFields);
                     },
                     removed: function (id) {
-                        _docIds = _.without(_docIds, id);
+                        obs.docs[id] = undefined;
                         sub.removed(collName, id);
                     }
                 });
-                sub.onStop(function () {observeHandle.stop();});
-                if(_parentDocId){
-                    if(!sub._uniObserveHandles[_parentDocId]){
-                        sub._uniObserveHandles[_parentDocId] = [];
-                    }
-                    if(!observeHandle){
-                        observeHandle = {};
-                    }
-                    observeHandle._docsIds = _docIds;
-                    observeHandle._collectionName = collName;
-                    sub._uniObserveHandles[_parentDocId].push(observeHandle);
-                }
+                return obs;
             });
             if(!_parentDocId){
                 sub.ready();
             }
+            sub.onStop(function () {
+                _.each(handles, function(h){
+                    h && h.handle && h.handle.stop();
+                });
+            });
+            return handles;
         }
     };
 
-    var _doMapping = function(id, doc, mappings, sub) {
+    var _doMapping = function(id, doc, collectionName) {
+        var mappings = this._uniMappings[collectionName];
         if (!mappings) {
             return;
         }
+        var sub = this;
         var mapFilter;
         _.each(mappings, function(mapping){
             mapFilter = {};
@@ -324,33 +289,46 @@ if(Meteor.isServer){
                 }
             }
             _.extend(mapFilter, mapping.filter);
-            _eachCursorsCheck(mapping.collection.find(mapFilter, mapping.options), sub, id);
+            var key = mapping.reverse && '_reverse';
+            //stopping and clearing up of observers
+            _stopObserveHandlesAndCleanUp.call(sub, collectionName, id, key);
+            var handles = _eachCursorsCheck.call(sub, mapping.collection.find(mapFilter, mapping.options), id);
+            //adding new observers
+            handles && _saveObserveHandles.call(sub, collectionName, id, key, handles[0]);
         });
 
     };
+
+    var _saveObserveHandles = function(collectionName, id, key, handles){
+        UniUtils.set(this._uniMappingsObs, collectionName+'.'+id+'.'+key, handles);
+    };
+
     /**
      * Stops subscriptions and removes old docs
      * @param sub
+     * @param collectionName
      * @param id
+     * @param key
      * @private
      */
 
-    var _stopObserveHandlesAndCleanUp = function(sub, id){
-        if(sub._uniObserveHandles[id] && sub._uniObserveHandles.length){
-            _.each(sub._uniObserveHandles[id], function(h){
-                if(h){
-                    h.stop && h.stop();
-                    if(h._docIds){
-                        _.each(h._docIds, function(docId){
-                            if(sub._documents[h.collectionName] && sub._documents[h.collectionName][docId]){
-                                sub.removed(h.collectionName, docId);
-                            }
-                        });
-                    }
-                }
-            });
-            delete sub._uniObserveHandles[id];
+    var _stopObserveHandlesAndCleanUp = function(collectionName, id, key){
+        var toStopping;
+        var sub = this;
+        if(key){
+            toStopping = {'key': UniUtils.get(sub._uniMappingsObs, collectionName+'.'+id+'.'+key)};
+        } else{
+            toStopping = UniUtils.get(sub._uniMappingsObs, collectionName+'.'+id) || {};
         }
+        _.each(toStopping, function(obs){
+            if(obs){
+                obs.handle && obs.handle.stop();
+                obs.docs && _.each(obs.docs, function(v, i){
+                    v && sub.removed(obs.name, i);
+                });
+                obs.docs = {};
+            }
+        });
     };
 
 }
