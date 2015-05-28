@@ -275,7 +275,7 @@ if(Meteor.isServer){
             if (mapping.reverse) {
                 mapFilter[mapping.key] = id;
             } else {
-                mapFilter._id = doc[mapping.key];
+                mapFilter._id = UniUtils.get(doc, mapping.key);
                 if(!mapFilter._id){
                     return;
                 }
@@ -332,4 +332,3 @@ if(Meteor.isServer){
     };
 
 }
-
