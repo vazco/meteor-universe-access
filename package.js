@@ -1,7 +1,7 @@
 Package.describe({
     summary: 'Allows to set a document level access/permission rules for publication and control it in allow/deny',
     name: 'vazco:universe-access',
-    version: '1.1.4',
+    version: '1.1.5',
     git: 'https://github.com/vazco/meteor-universe-collection'
 });
 
@@ -10,8 +10,8 @@ Package.on_use(function (api) {
     api.use([
         'underscore',
         'mongo',
-        'vazco:universe-utilities@1.0.6',
-        'vazco:universe-collection@1.1.0'
+        'vazco:universe-utilities@1.1.2',
+        'vazco:universe-collection@1.2.2'
     ]);
 
     api.add_files([

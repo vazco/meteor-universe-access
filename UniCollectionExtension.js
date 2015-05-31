@@ -59,7 +59,10 @@ var _addUniverseValidators = function(allowOrDeny, options) {
             disable: {allow: [], deny: []}
         };
     }
-
+    if(!options){
+        //init only
+        return;
+    }
     _.each(options, function(fn, key){
         if(_.contains(myKeys, key)){
             if(!_.isFunction(fn)){
@@ -220,6 +223,8 @@ if(Meteor.isServer){
                 return _.some(publishValids.allow, function(fn){ return fn(userId, doc, publicationName);});
             }
         }
+        console.warn('publish "'+publicationName+'" failed: Access denied.' +
+        ' No validators set on restricted collection "'+this._name+'"');
         return false;
     };
 
