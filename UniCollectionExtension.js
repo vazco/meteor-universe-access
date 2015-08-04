@@ -17,13 +17,13 @@
  * @param options.update {function}
  * @param options.remove {function}
  */
-UniCollection.prototype.allow = function(options){
-    Mongo.Collection.prototype.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
-};
+//UniCollection.prototype.allow = function(options){
+//    Mongo.Collection.prototype.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
+//};
 
-UniUsers.allow = function(options){
-    Meteor.users.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
-};
+//UniUsers.allow = function(options){
+//    Meteor.users.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
+//};
 
 /**
  * This works like the same method in Mongo.Collection
@@ -42,38 +42,16 @@ UniUsers.allow = function(options){
  * @param options.update {function}
  * @param options.remove {function}
  */
-UniCollection.prototype.deny = function(options){
-    Mongo.Collection.prototype.deny.call(this, _addUniverseValidators.call(this, 'deny', options));
-};
+//UniCollection.prototype.deny = function(options){
+//    Mongo.Collection.prototype.deny.call(this, _addUniverseValidators.call(this, 'deny', options));
+//};
 
-UniUsers.deny = function(options){
-    Meteor.users.deny.call(this, _addUniverseValidators.call(this, 'deny', options));
-};
+//UniUsers.deny = function(options){
+//    Meteor.users.deny.call(this, _addUniverseValidators.call(this, 'deny', options));
+//};
 
-var _addUniverseValidators = function(allowOrDeny, options) {
-    var myKeys = ['publish', 'disable'];
-    var self = this;
-    if(!self._universeValidators){
-        self._universeValidators = {
-            publish: {allow: [], deny: []},
-            disable: {allow: [], deny: []}
-        };
-    }
-    if(!options){
-        //init only
-        return;
-    }
-    _.each(options, function(fn, key){
-        if(_.contains(myKeys, key)){
-            if(!_.isFunction(fn)){
-                throw new Error(allowOrDeny + ': Value for `' + key + '` must be a function');
-            }
-            self._universeValidators[key][allowOrDeny].push(fn);
-        }
-    });
-
-    return _.omit(options, myKeys);
-};
+UniCollection.prototype._universeAllowDenyTypes = UniCollection.prototype._universeAllowDenyTypes || [];
+UniCollection.prototype._universeAllowDenyTypes.push('publish');
 
 if(Meteor.isServer){
     UniCollection._publications = {};
@@ -160,7 +138,7 @@ if(Meteor.isServer){
             this._directAdded(collectionName, id, doc);
             _doMapping.call(this, id, doc, collectionName);
             return true;
-        } else if (_validateRules.call(col, this.userId, doc, this._name)) {
+        } else if (col.validateUniverseRule('publish', this.userId, doc, this._name)) {
             this._uniDocCounts[collectionName][id]++;
             this._directAdded(collectionName, id, doc);
             _doMapping.call(this, id, doc, collectionName);
@@ -179,7 +157,7 @@ if(Meteor.isServer){
         }
         var hasOldDoc = UniUtils.get(this, '_documents.'+collectionName+'.'+id);
         var doc = col.findOne(id, {fields: allowedFields || undefined});
-        var newAccess = _validateRules.call(col, this.userId, doc, this._name);
+        var newAccess = col.validateUniverseRule('publish', this.userId, doc, this._name);
         if(!hasOldDoc && !newAccess){
             //ignoring missed with no rights
             return;
@@ -209,23 +187,6 @@ if(Meteor.isServer){
             return this._directRemoved(collectionName, id);
         }
 
-    };
-
-    var _validateRules = function(userId, doc, publicationName){
-        var publishValids = UniUtils.get(this, '_universeValidators.publish');
-        if(publishValids){
-            if(publishValids.deny){
-                if(_.some(publishValids.deny, function(fn){ return fn(userId, doc, publicationName);})){
-                    return false;
-                }
-            }
-            if(publishValids.allow){
-                return _.some(publishValids.allow, function(fn){ return fn(userId, doc, publicationName);});
-            }
-        }
-        console.warn('publish "'+publicationName+'" failed: Access denied.' +
-        ' No validators set on restricted collection "'+this._name+'"');
-        return false;
     };
 
    var _eachCursorsCheck = function(curs, _parentDocId){
