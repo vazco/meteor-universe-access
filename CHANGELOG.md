@@ -1,4 +1,8 @@
 
+====1.5.0====
+-------------
+- Integration of new universe collection api
+
 ====1.1.3====
 -------------
 - Removed unnecessary dependencies

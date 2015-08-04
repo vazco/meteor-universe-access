@@ -1,3 +1,4 @@
+<img src="http://uniproject.vazco.eu/black_logo.png" />
 # Universe Access
 
 #### This is extension of  [Universe Collection & Document Helpers](https://atmospherejs.com/vazco/universe-collection) #####
