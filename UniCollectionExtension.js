@@ -21,9 +21,9 @@
 //    Mongo.Collection.prototype.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
 //};
 
-//UniUsers.allow = function(options){
-//    Meteor.users.allow.call(this, _addUniverseValidators.call(this, 'allow', options));
-//};
+UniUsers.allow = function(){
+    UniCollection.prototype.allow.apply(this, arguments);
+};
 
 /**
  * This works like the same method in Mongo.Collection
@@ -52,6 +52,9 @@
 
 UniCollection.prototype._universeAllowDenyTypes = UniCollection.prototype._universeAllowDenyTypes || [];
 UniCollection.prototype._universeAllowDenyTypes.push('publish');
+
+UniUsers._universeAllowDenyTypes = UniUsers._universeAllowDenyTypes || [];
+UniUsers._universeAllowDenyTypes.push('publish');
 
 if(Meteor.isServer){
     UniCollection._publications = {};
