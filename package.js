@@ -10,8 +10,9 @@ Package.onUse(function (api) {
     api.use([
         'underscore',
         'mongo',
-        'vazco:universe-utilities@1.1.2',
-        'vazco:universe-collection@1.5.2'
+        'universe:utilities',
+        'universe:utilities-blaze',
+        'universe:collection'
     ]);
 
     api.addFiles([
