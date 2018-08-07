@@ -1,5 +1,12 @@
-<img src="http://uniproject.vazco.eu/black_logo.png" />
-# Universe Access
+<h1 align="center">
+    <a href="https://github.com/vazco">vazco</a>/Universe Access
+</h1>
+
+&nbsp;
+
+<h3 align="center">
+  -- Abandonware. This package is deprecated! --
+</h3>
 
 #### This is extension of  [Universe Collection & Document Helpers](https://atmospherejs.com/vazco/universe-collection) #####
 
@@ -184,3 +191,9 @@ Return true if this should be disallowed.
 
 **WARNING:** This rule will be respected only by 'UniCollection.publish',
 Meteor.publish is expected to do their own access to checking instead relying on allow and deny.
+
+## License
+
+<img src="https://vazco.eu/banner.png" align="right">
+
+**Like every package maintained by [Vazco](https://vazco.eu/), Universe Access is [MIT licensed](https://github.com/vazco/uniforms/blob/master/LICENSE).**
