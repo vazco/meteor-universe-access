@@ -8,6 +8,8 @@
   -- Abandonware. This package is deprecated! --
 </h3>
 
+&nbsp;
+
 #### This is extension of  [Universe Collection & Document Helpers](https://atmospherejs.com/vazco/universe-collection) #####
 
 This package allows to set a document level access/permission rules for publication.
